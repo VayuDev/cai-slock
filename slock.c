@@ -156,7 +156,7 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 	running = 1;
 	failure = 0;
 
-	
+	goto render;
 	
 
 	while (running && !XNextEvent(dpy, &ev)) {
@@ -206,8 +206,10 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 				}
 				break;
 			}
-			color = len ? INPUT : ((failure || failonclear) ? FAILED : INIT);
+			
 			//if (running && oldc != color) 
+render:
+			color = len != 0 ? INPUT : ((failure || failonclear) ? FAILED : INIT);
 			{
 				for (screen = 0; screen < nscreens; screen++) {
 					const unsigned int w = DisplayWidth(dpy, locks[screen]->screen);
@@ -221,7 +223,7 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 					
 					switch(color) {
 					case INIT:
-						cairo_set_source_rgb(cr, 0.1, 0.1, 0.1);
+						cairo_set_source_rgba(cr, 0.1, 0.1, 0.1, 0.1);
 						cairo_rectangle(cr, 0, 0, w, h);
 						cairo_fill(cr);
 						break;
@@ -246,7 +248,7 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
             			pango_cairo_show_layout(cr, locks[screen]->fontLayout);    
 						break;
 					case FAILED:
-						cairo_set_source_rgb(cr, 1, 0.1, 0.1);
+						cairo_set_source_rgba(cr, 1, 0.1, 0.1, 0.5);
 						cairo_rectangle(cr, 0, 0, w, h);
 						cairo_fill(cr);
 						break;
