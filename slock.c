@@ -209,7 +209,13 @@ readpw(Display *dpy, struct xrandr *rr, struct lock **locks, int nscreens,
 			
 			//if (running && oldc != color) 
 render:
-			color = len != 0 ? INPUT : ((failure || failonclear) ? FAILED : INIT);
+			if(len != 0) {
+				color = INPUT;
+			} else if(failonclear || failure) {
+				color = FAILED;
+			} else {
+				color = INIT;
+			}
 			{
 				for (screen = 0; screen < nscreens; screen++) {
 					const unsigned int w = DisplayWidth(dpy, locks[screen]->screen);
@@ -220,24 +226,39 @@ render:
 
 					cairo_t *cr = locks[screen]->cr;
 					
-					
+					double centerX = w/2, centerY = h/2;
+					double radius = 130 * 2;
 					switch(color) {
-					case INIT:
-						cairo_set_source_rgba(cr, 0.1, 0.1, 0.1, 0.1);
-						cairo_rectangle(cr, 0, 0, w, h);
-						cairo_fill(cr);
-						break;
 					case INPUT:
-						cairo_set_source_rgba(cr, 0.1, 0.1, 1, 0);
-						cairo_rectangle(cr, 0, 0, w, h);
-						cairo_fill(cr);
-
+						//random green point
 						cairo_set_source_rgba(cr, 0, 1, 0, 0.5);
 						
-						//cairo_move_to(cr, , );
-						cairo_arc(cr, rand() % w, rand() % h, 30, 0, 2 * G_PI);
-						cairo_fill(cr);
+						double x, y;
+						do {
+							x = (rand() % 15 + 0.5)/15.0 * w;
+							y = (rand() % 8 + 0.5)/8.0 * h;
+							//printf("%f vs %f\n", x, centerX - radius);
+							//fflush(stdout);
+						} while(!((x < centerX - radius || x > centerX + radius) || (y < centerY - radius || y > centerY + radius)));
 						
+						
+						cairo_arc(cr, x, y, 30, 0, 2 * G_PI);
+						cairo_fill(cr);
+					case INIT:
+
+
+						cairo_set_line_width(cr, 20);
+						cairo_set_source_rgba(cr, 1, 1, 1, 0.8);
+						cairo_arc(cr, w/2, h/2, radius / 2, 0, 2 * G_PI);
+						cairo_close_path(cr);
+						//cairo_stroke_preserve(cr);
+						cairo_stroke_preserve(cr);
+						
+						cairo_set_source_rgba(cr, 0, 0, 0, 0.4);
+						cairo_arc(cr, w/2, h/2, radius / 2, 0, 2 * G_PI);
+						cairo_fill(cr);
+
+
 						cairo_set_source_rgba(cr, 1, 1, 1, 1);
 						pango_layout_set_text(locks[screen]->fontLayout, "Locked", -1);
 						int tw = 0, th = 0;
@@ -245,7 +266,7 @@ render:
 
 						cairo_move_to(locks[screen]->cr, w/2 - tw/2, h/2 - th/2);
 						
-            			pango_cairo_show_layout(cr, locks[screen]->fontLayout);    
+            			pango_cairo_show_layout(cr, locks[screen]->fontLayout);
 						break;
 					case FAILED:
 						cairo_set_source_rgba(cr, 1, 0.1, 0.1, 0.5);
@@ -301,7 +322,61 @@ lockscreen(Display *dpy, struct xrandr *rr, int screen)
    	int width = gwa.width;
    	int height = gwa.height;
 
-	lock->screenshot = XGetImage(dpy, DefaultRootWindow(dpy), 0, 0, width, height, AllPlanes, ZPixmap);
+	XImage *tmpImg = XGetImage(dpy, DefaultRootWindow(dpy), 0, 0, width, height, AllPlanes, ZPixmap);
+
+	Visual *v = DefaultVisual(dpy, lock->screen);
+	lock->screenshot = XSubImage(tmpImg, 0, 0, width, height);
+
+	printf("%i", lock->screenshot->bits_per_pixel);
+	
+	fflush(stdout);
+
+	int stride = rand() % 20 - 10;
+	for(int x = 0; x < width; ++x) {
+		for(int y = 0; y < height; ++y) {
+			if(x % 5 == 0) {
+				stride =  rand() % 20 - 10;;
+		}
+			
+		
+			/*lock->screenshot->data[] = 0;
+			lock->screenshot->data[y * 3 + height * x * 3 + 1] = 0;
+			lock->screenshot->data[y * 3 + height * x * 3 + 2] = 0;*/
+
+			char r, g, b;
+
+			if(stride + x < 0) {
+				r = 0;
+				b = 0;
+				g = 0;
+			}
+			else if(stride + x >= width) {
+				r = 0;
+				b = 0;
+				g = 0;
+			} else {
+				r = tmpImg->data[(y + stride) * 4 + height * (x) * 4 + 0];
+				g = tmpImg->data[(y + stride) * 4 + height * (x) * 4 + 1];
+				b = tmpImg->data[(y + stride) * 4 + height * (x) * 4 + 2];
+			}
+			
+
+			/*short sum = r + g + b;
+			sum /= 3;
+			r = sum; 
+			g = sum;
+			b = sum;*/
+			//r = 128 - r;
+			//g = 128 - g;
+			//b = 128 - b;
+
+			lock->screenshot->data[y * 4 + height * x * 4 + 0] = r;
+			lock->screenshot->data[y * 4 + height * x * 4 + 1] = g;
+			lock->screenshot->data[y * 4 + height * x * 4 + 2] = b;
+		}
+	}
+
+
 
 	/* init */
 	wa.override_redirect = 1;
@@ -323,7 +398,7 @@ lockscreen(Display *dpy, struct xrandr *rr, int screen)
 
 	lock->gc = XCreateGC(dpy, lock->fullpmap, 0, NULL);;
 
-	Visual *v = DefaultVisual(dpy, lock->screen);
+	
 	lock->surface = cairo_xlib_surface_create(dpy, lock->fullpmap, v, DisplayWidth(dpy, lock->screen), DisplayHeight(dpy, lock->screen));
 	lock->cr = cairo_create(lock->surface);
 
