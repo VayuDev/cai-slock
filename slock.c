@@ -245,14 +245,15 @@ render:
 						cairo_arc(cr, x, y, 30, 0, 2 * G_PI);
 						cairo_fill(cr);
 					case INIT:
-
+						cairo_set_source_rgba(cr, 0, 0, 0, 0);
+						cairo_stroke(cr);
 
 						cairo_set_line_width(cr, 20);
 						cairo_set_source_rgba(cr, 1, 1, 1, 0.8);
 						cairo_arc(cr, w/2, h/2, radius / 2, 0, 2 * G_PI);
-						cairo_close_path(cr);
-						//cairo_stroke_preserve(cr);
-						cairo_stroke_preserve(cr);
+						//cairo_close_path(cr);
+						cairo_stroke(cr);
+						cairo_set_line_width(cr, 0);
 						
 						cairo_set_source_rgba(cr, 0, 0, 0, 0.4);
 						cairo_arc(cr, w/2, h/2, radius / 2, 0, 2 * G_PI);
