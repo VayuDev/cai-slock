@@ -7,6 +7,8 @@ Requirements
 ------------
 In order to build slock you need the Xlib header files.
 
+You'll also need cairo, pango and pkg-config
+
 
 Installation
 ------------
